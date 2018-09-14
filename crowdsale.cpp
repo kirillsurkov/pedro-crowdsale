@@ -38,35 +38,33 @@ void crowdsale::on_deposit(account_name investor, eosio::asset quantity) {
 	eosio_assert(quantity.amount >= MIN_CONTRIB, "Contribution too low");
 	eosio_assert((quantity.amount <= MAX_CONTRIB) || !MAX_CONTRIB, "Contribution too high");
 
-	if (WHITELIST) {
-		auto it = this->whitelist.find(investor);
-		eosio_assert(it != this->whitelist.end(), "Account not whitelisted");
-	}
+	auto whitelist_it = this->whitelist.find(investor);
+	eosio_assert(whitelist_it != this->whitelist.end(), "Account not whitelisted");
 
-	auto it = this->deposits.find(investor);
+	auto deposits_it = this->deposits.find(investor);
 
 	int64_t tokens_to_give = EOS2TKN(quantity.amount);
 
 	this->state.total_eoses += quantity.amount;
 	this->state.total_tokens += tokens_to_give;
 
-	eosio_assert(this->state.total_tokens <= HARD_CAP_TKN, "Hard cap reached");
+	eosio_assert(this->state.total_eoses <= HARD_CAP_EOS, "Hard cap reached");
 
 	int64_t entire_eoses = quantity.amount;
 	int64_t entire_tokens = tokens_to_give;
-	if (it != this->deposits.end()) {
-		entire_eoses += it->eoses;
-		entire_tokens += it->tokens;
+	if (deposits_it != this->deposits.end()) {
+		entire_eoses += deposits_it->eoses;
+		entire_tokens += deposits_it->tokens;
 	}
 
-	if (it == this->deposits.end()) {
+	if (deposits_it == this->deposits.end()) {
 		this->deposits.emplace(this->_self, [investor, entire_eoses, entire_tokens](auto& deposit) {
 			deposit.account = investor;
 			deposit.eoses = entire_eoses;
 			deposit.tokens = entire_tokens;
 		});
 	} else {
-		this->deposits.modify(it, this->_self, [investor, entire_eoses, entire_tokens](auto& deposit) {
+		this->deposits.modify(deposits_it, this->_self, [investor, entire_eoses, entire_tokens](auto& deposit) {
 			deposit.account = investor;
 			deposit.eoses = entire_eoses;
 			deposit.tokens = entire_tokens;
@@ -116,19 +114,16 @@ void crowdsale::setfinish(time_t finish) {
 
 void crowdsale::white(account_name account) {
 	require_auth(this->issuer);
-	eosio_assert(WHITELIST, "Whitelist not enabled");
 	this->setwhite(account);
 }
 
 void crowdsale::unwhite(account_name account) {
 	require_auth(this->issuer);
-	eosio_assert(WHITELIST, "Whitelist not enabled");
 	this->unsetwhite(account);
 }
 
 void crowdsale::whitemany(eosio::vector<account_name> accounts) {
 	require_auth(this->issuer);
-	eosio_assert(WHITELIST, "Whitelist not enabled");
 	for (account_name account : accounts) {
 		this->setwhite(account);
 	}
@@ -136,15 +131,13 @@ void crowdsale::whitemany(eosio::vector<account_name> accounts) {
 
 void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 	require_auth(this->issuer);
-	eosio_assert(WHITELIST, "Whitelist not enabled");
 	for (account_name account : accounts) {
 		this->unsetwhite(account);
 	}
 }
 
 void crowdsale::finalize() {
-	eosio_assert(NOW > this->state.finish || this->state.total_tokens + EOS2TKN(MIN_CONTRIB + !MIN_CONTRIB) >= HARD_CAP_TKN, "Crowdsale hasn't finished");
-	eosio_assert(this->state.total_tokens >= SOFT_CAP_TKN, "Softcap not reached");
+	eosio_assert(NOW > this->state.finish || this->state.total_eoses + MIN_CONTRIB + !MIN_CONTRIB >= HARD_CAP_EOS, "Crowdsale hasn't finished");
 	eosio_assert(!TRANSFERABLE, "There is no reason to call finalize");
 
 	struct unlock {
@@ -159,8 +152,6 @@ void crowdsale::finalize() {
 }
 
 void crowdsale::withdraw() {
-	eosio_assert(this->state.total_tokens >= SOFT_CAP_TKN, "Softcap not reached");
-
 	require_auth(this->issuer);
 
 	this->asset_eos.set_amount(this->state.total_eoses);
@@ -169,28 +160,11 @@ void crowdsale::withdraw() {
 	this->state.total_eoses = 0;
 }
 
-void crowdsale::refund(account_name investor) {
-	eosio_assert(NOW > this->state.finish, "Crowdsale hasn't finished");
-	eosio_assert(this->state.total_tokens < SOFT_CAP_TKN, "Softcap reached");
-
-	require_auth(investor);
-
-	auto it = this->deposits.find(investor);
-	eosio_assert(it != this->deposits.end(), "Nothing to refund");
-
-	this->asset_eos.set_amount(it->eoses);
-	this->inline_transfer(this->_self, investor, this->asset_eos, "Refund");
-
-	this->deposits.modify(it, investor, [](auto& d) {
-		d.eoses = 0;
-	});
-}
-
 #ifdef DEBUG
 void crowdsale::settime(time_t time) {
 	this->state.time = time;
 }
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(refund)(transfer)(settime));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(transfer)(settime));
 #else
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(refund)(transfer));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(transfer));
 #endif

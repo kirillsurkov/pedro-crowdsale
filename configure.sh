@@ -2,13 +2,11 @@ ARGUMENT_LIST=(
 	"issuer"
 	"symbol"
 	"decimals"
-	"whitelist"
 	"transferable"
 	"rate"
 	"ratedenom"
 	"mincontrib"
 	"maxcontrib"
-	"softcap"
 	"hardcap"
 	"mint"
 	"contract"
@@ -40,7 +38,7 @@ function usage() {
 	echo "--mint - add mint destination"
 	echo "--contract - token contract account"
 	echo "Example:"
-	echo "./configure.sh --contract mywishtokens --issuer mywishio --symbol WISH --decimals 4 --whitelist false --transferable false --rate 2 --ratedenom 1 --mincontrib 10000 --maxcontrib 10000000 --softcap 1000000 --hardcap 100000000 --mint \"mywishio 100000\" --mint \"mywishairdr2 20000\""
+	echo "./configure.sh --contract mywishtokens --issuer mywishio --symbol WISH --decimals 4 --transferable false --rate 2 --ratedenom 1 --mincontrib 10000 --maxcontrib 10000000 --hardcap 100000000 --mint \"mywishio 100000\" --mint \"mywishairdr2 20000\""
 }
 
 function check_input() {
@@ -64,8 +62,6 @@ function out() {
 	echo "#define SYMBOL $symbol"
 	echo "#define DECIMALS $decimals"
 
-	echo "#define WHITELIST $whitelist"
-
 	echo "#define TRANSFERABLE $transferable"
 
 	echo "#define RATE $rate"
@@ -74,8 +70,7 @@ function out() {
 	echo "#define MIN_CONTRIB $mincontrib"
 	echo "#define MAX_CONTRIB $maxcontrib"
 
-	echo "#define SOFT_CAP_TKN $softcap"
-	echo "#define HARD_CAP_TKN $hardcap"
+	echo "#define HARD_CAP_EOS $hardcap"
 
 	echo "#define CONTRACT $contract"
 
@@ -132,11 +127,6 @@ while [[ $# -gt 0 ]]; do
 
 		--maxcontrib)
 			maxcontrib=$2
-			shift 2
-			;;
-
-		--softcap)
-			softcap=$2
 			shift 2
 			;;
 
