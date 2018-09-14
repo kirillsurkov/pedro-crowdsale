@@ -106,6 +106,18 @@ void crowdsale::withdraw() {
 	this->state.total_eos.set_amount(0);
 }
 
+void crowdsale::refund(account_name investor) {
+	require_auth(investor);
+
+	auto it = this->whitelist.find(investor);
+	eosio_assert(it == this->whitelist.end(), "No pending investments");
+
+	deposits deposits_table(this->_self, investor);
+	for (auto it = deposits_table.begin(); it != deposits_table.end(); it++) {
+		this->inline_transfer(this->_self, investor, it->eos, "Refund");
+	}
+}
+
 void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd) {
 	require_auth(this->issuer);
 

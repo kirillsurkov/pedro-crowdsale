@@ -145,6 +145,7 @@ public:
 	void whitemany(eosio::vector<account_name> accounts);
 	void unwhitemany(eosio::vector<account_name> accounts);
 	void withdraw();
+	void refund(account_name investor);
 	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd);
 #ifdef DEBUG
 	void settime(time_t time);
