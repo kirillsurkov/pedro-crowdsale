@@ -14,23 +14,7 @@
 crowdsale::crowdsale(account_name self) :
 	eosio::contract(self),
 	state_singleton(this->_self, this->_self),
-	deposits(this->_self, this->_self),
 	whitelist(this->_self, this->_self),
-	greylist(this->_self, this->_self),
-	asset_eos(
-		eosio::asset(0, eosio::string_to_symbol(4, "EOS")),
-		eosio::string_to_name("eosio.token")
-	),
-	asset_tkn(
-		eosio::asset(0, eosio::string_to_symbol(DECIMALS, STR(SYMBOL))),
-		eosio::string_to_name(STR(CONTRACT))
-	),
-	asset_eth(
-		eosio::asset(0, eosio::string_to_symbol(4, "ETH"))
-	),
-	asset_usd(
-		eosio::asset(0, eosio::string_to_symbol(4, "USD"))
-	),
 	issuer(eosio::string_to_name(STR(ISSUER))),
 	state(state_singleton.exists() ? state_singleton.get() : default_parameters())
 {
@@ -40,7 +24,7 @@ crowdsale::~crowdsale() {
 	this->state_singleton.set(this->state, this->_self);
 }
 
-void crowdsale::on_deposit(account_name investor, eosio::asset quantity) {
+void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity) {
 	eosio_assert(NOWDAY == this->state.last_daily, "Rates not updated yet");
 	eosio_assert(NOW >= this->state.start, "Crowdsale hasn't started");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
@@ -48,65 +32,36 @@ void crowdsale::on_deposit(account_name investor, eosio::asset quantity) {
 	eosio_assert(quantity.amount >= MIN_CONTRIB, "Contribution too low");
 	eosio_assert((quantity.amount <= MAX_CONTRIB) || !MAX_CONTRIB, "Contribution too high");
 
-	auto whitelist_it = this->whitelist.find(investor);
-	eosio_assert(whitelist_it != this->whitelist.end(), "Account not whitelisted");
-
-	auto deposits_it = this->deposits.find(investor);
-
-	this->asset_tkn.set_amount(EOS2TKN(quantity.amount));
-
-	this->state.total_eos += quantity;
-	this->state.total_tkn += this->asset_tkn;
+	if (this->whitelist.find(investor) != this->whitelist.end()) {
+		this->state.total_eos += quantity;
+	}
 
 	eosio_assert(this->state.total_eos.amount <= HARD_CAP_EOS, "Hard cap reached");
 
-	int64_t entire_eoses = quantity.amount;
-	int64_t entire_tokens = this->asset_tkn.amount;
-	if (deposits_it != this->deposits.end()) {
-		entire_eoses += deposits_it->eoses;
-		entire_tokens += deposits_it->tokens;
-	}
-
-	if (deposits_it == this->deposits.end()) {
-		this->deposits.emplace(this->_self, [investor, entire_eoses, entire_tokens](auto& deposit) {
-			deposit.account = investor;
-			deposit.eoses = entire_eoses;
-			deposit.tokens = entire_tokens;
-		});
-	} else {
-		this->deposits.modify(deposits_it, this->_self, [investor, entire_eoses, entire_tokens](auto& deposit) {
-			deposit.account = investor;
-			deposit.eoses = entire_eoses;
-			deposit.tokens = entire_tokens;
-		});
-	}
-
-	this->inline_issue(investor, this->asset_tkn, "Crowdsale");
+	deposits deposits_table(this->_self, investor);
+	deposits_table.emplace(this->_self, [&](auto& deposit) {
+		deposit.pk = deposits_table.available_primary_key();
+		deposit.eos = quantity;
+		deposit.eosusd = this->state.eosusd;
+	});
 }
 
 void crowdsale::init(time_t start, time_t finish) {
 	eosio_assert(!this->state_singleton.exists(), "Already initialized");
 	eosio_assert(start < finish, "Start must be less than finish");
+
 	require_auth(this->_self);
 
 	this->state.start = start;
 	this->state.finish = finish;
 
-	struct dest {
-		account_name to;
-		int64_t amount;
-	} dests[MINTCNT];
-	#define FILLDESTS(z, i, data)\
-		dests[i] = dest{\
+	#define PREMINT(z, i, data) \
+		this->inline_issue(\
 			eosio::string_to_name(STR(MINTDEST ## i)),\
-			MINTVAL ## i\
-		};
-	BOOST_PP_REPEAT(MINTCNT, FILLDESTS, );
-
-	for (int i = 0; i < MINTCNT; i++) {
-		this->asset_tkn.set_amount(dests[i].amount);
-		this->inline_issue(dests[i].to, this->asset_tkn, "Initial token distribution");
-	}
+			ASSET_TKN(MINTVAL ## i),\
+			"Initial token distribution"\
+		);
+	BOOST_PP_REPEAT(MINTCNT, PREMINT, );
 }
 
 void crowdsale::setstart(time_t start) {
@@ -119,30 +74,6 @@ void crowdsale::setfinish(time_t finish) {
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	require_auth(this->issuer);
 	this->state.finish = finish;
-}
-
-void crowdsale::grey(account_name account) {
-	require_auth(this->issuer);
-	this->setgrey(account);
-}
-
-void crowdsale::ungrey(account_name account) {
-	require_auth(this->issuer);
-	this->unsetgrey(account);
-}
-
-void crowdsale::greymany(eosio::vector<account_name> accounts) {
-	require_auth(this->issuer);
-	for (account_name account : accounts) {
-		this->setgrey(account);
-	}
-}
-
-void crowdsale::ungreymany(eosio::vector<account_name> accounts) {
-	require_auth(this->issuer);
-	for (account_name account : accounts) {
-		this->unsetgrey(account);
-	}
 }
 
 void crowdsale::white(account_name account) {
@@ -169,21 +100,6 @@ void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 	}
 }
 
-void crowdsale::finalize() {
-	eosio_assert(NOW > this->state.finish || this->state.total_eos.amount + MIN_CONTRIB + !MIN_CONTRIB >= HARD_CAP_EOS, "Crowdsale hasn't finished");
-	eosio_assert(!TRANSFERABLE, "There is no reason to call finalize");
-
-	struct unlock {
-		eosio::symbol_type symbol;
-	};
-	eosio::action(
-		eosio::permission_level(this->_self, N(active)),
-		this->asset_tkn.contract,
-		N(unlock),
-		unlock{this->asset_tkn.symbol}
-	).send();
-}
-
 void crowdsale::withdraw() {
 	require_auth(this->issuer);
 	this->inline_transfer(this->_self, this->issuer, this->state.total_eos, "Withdraw");
@@ -193,9 +109,9 @@ void crowdsale::withdraw() {
 void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd) {
 	require_auth(this->issuer);
 
-	eosio_assert(eth.symbol == this->asset_eth.symbol, "invalid ETH symbol");
-	eosio_assert(ethusd.symbol == this->asset_usd.symbol, "invalid USD symbol for ETHUSD");
-	eosio_assert(eosusd.symbol == this->asset_usd.symbol, "invalid USD symbol for EOSUSD");
+	eosio_assert(eth.symbol == SYMBOL_ETH, "Invalid ETH symbol");
+	eosio_assert(ethusd.symbol == SYMBOL_USD, "Invalid USD symbol for ETHUSD");
+	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
 
 	this->state.total_eth = eth;
 	this->state.ethusd = ethusd;
@@ -207,7 +123,7 @@ void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eos
 void crowdsale::settime(time_t time) {
 	this->state.time = time;
 }
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(grey)(ungrey)(greymany)(ungreymany)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(transfer)(settime));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(transfer)(settime));
 #else
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(grey)(ungrey)(greymany)(ungreymany)(white)(unwhite)(whitemany)(unwhitemany)(finalize)(withdraw)(transfer));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(transfer));
 #endif

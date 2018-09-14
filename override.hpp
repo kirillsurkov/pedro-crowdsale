@@ -25,7 +25,7 @@ void crowdsale::transfer(uint64_t sender, uint64_t receiver) {
 	eosio_assert(data.quantity.amount > 0, "Transfer must be positive");
 	eosio_assert(data.quantity.is_valid(), "Invalid token transfer");
 	if (data.from != this->_self) {
-		eosio_assert(data.quantity.symbol == this->asset_eos.symbol, "Only EOS Deposits");
-		this->on_deposit(data.from, data.quantity);
+		eosio_assert(data.quantity.symbol == SYMBOL_EOS, "Only EOS Deposits");
+		this->on_deposit(data.from, eosio::extended_asset(data.quantity, N(eosio.token)));
 	}
 }
