@@ -16,8 +16,12 @@ private:
 	};
 
 	struct state_t {
-		int64_t total_eoses;
-		int64_t total_tokens;
+		eosio::extended_asset total_eos;
+		eosio::extended_asset total_tkn;
+		eosio::asset total_eth;
+		eosio::asset ethusd;
+		eosio::asset eosusd;
+		int32_t last_daily;
 		time_t start;
 		time_t finish;
 #ifdef DEBUG
@@ -34,17 +38,20 @@ private:
 	};
 
 	// @abi table whitelist
-	struct whitelist_t {
+	struct userlist_t {
 		account_name account;
 		uint64_t primary_key() const { return account; }
 	};
 
 	eosio::singleton<N(state), state_t> state_singleton;
 	eosio::multi_index<N(deposit), deposit_t> deposits;
-	eosio::multi_index<N(whitelist), whitelist_t> whitelist;
+	eosio::multi_index<N(greylist), userlist_t> greylist;
+	eosio::multi_index<N(whitelist), userlist_t> whitelist;
 
 	eosio::extended_asset asset_eos;
 	eosio::extended_asset asset_tkn;
+	eosio::asset asset_eth;
+	eosio::asset asset_usd;
 
 	account_name issuer;
 
@@ -54,8 +61,12 @@ private:
 
 	state_t default_parameters() const {
 		return state_t{
-			.total_eoses = 0,
-			.total_tokens = 0,
+			.total_eos = this->asset_eos,
+			.total_tkn = this->asset_tkn,
+			.total_eth = this->asset_eth,
+			.ethusd = this->asset_usd,
+			.eosusd = this->asset_usd,
+			.last_daily = 0,
 			.start = 0,
 			.finish = 0,
 #ifdef DEBUG
@@ -93,6 +104,20 @@ private:
 		).send();
 	}
 
+	void setgrey(account_name account) {
+		auto it = this->greylist.find(account);
+		eosio_assert(it == this->greylist.end(), "Account already greylisted");
+		this->greylist.emplace(this->_self, [account](auto& e) {
+			e.account = account;
+		});
+	}
+
+	void unsetgrey(account_name account) {
+		auto it = this->greylist.find(account);
+		eosio_assert(it != this->greylist.end(), "Account not greylisted");
+		greylist.erase(it);
+	}
+
 	void setwhite(account_name account) {
 		auto it = this->whitelist.find(account);
 		eosio_assert(it == this->whitelist.end(), "Account already whitelisted");
@@ -114,13 +139,17 @@ public:
 	void init(time_t start, time_t finish);
 	void setstart(time_t start);
 	void setfinish(time_t finish);
+	void grey(account_name account);
+	void ungrey(account_name account);
+	void greymany(eosio::vector<account_name> accounts);
+	void ungreymany(eosio::vector<account_name> accounts);
 	void white(account_name account);
 	void unwhite(account_name account);
 	void whitemany(eosio::vector<account_name> accounts);
 	void unwhitemany(eosio::vector<account_name> accounts);
 	void finalize();
 	void withdraw();
-	void refund(account_name investor);
+	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd);
 #ifdef DEBUG
 	void settime(time_t time);
 #endif
