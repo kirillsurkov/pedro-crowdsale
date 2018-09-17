@@ -22,6 +22,7 @@ private:
 		eosio::asset ethusd;
 		eosio::asset eosusd;
 		int32_t last_daily;
+		bool finalized;
 		time_t start;
 		time_t finish;
 #ifdef DEBUG
@@ -60,6 +61,7 @@ private:
 			.ethusd = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
 			.last_daily = 0,
+			.finalized = false,
 			.start = 0,
 			.finish = 0,
 #ifdef DEBUG
@@ -68,16 +70,24 @@ private:
 		};
 	}
 
-	inline eosio::asset eos2usd(eosio::asset asset_eos) const {
-		return ASSET_USD(asset_eos.amount * this->state.eosusd.amount / POW10(4));
+	inline eosio::asset eos2usd(eosio::asset asset_eos, eosio::asset eosusd) const {
+		return ASSET_USD(asset_eos.amount * eosusd.amount / POW10(4));
 	}
 
-	inline eosio::asset eth2usd(eosio::asset asset_eth) const {
-		return ASSET_USD(asset_eth.amount * this->state.ethusd.amount / POW10(4));
+	inline eosio::asset eth2usd(eosio::asset asset_eth, eosio::asset ethusd) const {
+		return ASSET_USD(asset_eth.amount * ethusd.amount / POW10(4));
+	}
+
+	inline eosio::extended_asset usd2eos(eosio::asset asset_usd, eosio::asset eosusd) const {
+		return ASSET_EOS(asset_usd.amount * POW10(4) / eosusd.amount);
+	}
+
+	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd) const {
+		return ASSET_TKN(asset_usd.amount * POW10(DECIMALS) * RATE / (1.0 * POW10(4) * RATE_DENOM));
 	}
 
 	inline eosio::asset total_usd() const {
-		return this->eos2usd(this->state.total_eos) + this->eth2usd(this->state.total_eth);
+		return this->eos2usd(this->state.total_eos, this->state.eosusd) + this->eth2usd(this->state.total_eth, this->state.ethusd);
 	}
 
 	void inline_issue(account_name to, eosio::extended_asset quantity, std::string memo) const {
@@ -144,8 +154,9 @@ public:
 	void unwhite(account_name account);
 	void whitemany(eosio::vector<account_name> accounts);
 	void unwhitemany(eosio::vector<account_name> accounts);
-	void withdraw();
+	void withdraw(account_name investor);
 	void refund(account_name investor);
+	void finalize();
 	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd);
 #ifdef DEBUG
 	void settime(time_t time);

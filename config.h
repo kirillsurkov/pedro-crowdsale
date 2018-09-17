@@ -6,7 +6,7 @@
 #define RATE_DENOM 1
 #define MIN_CONTRIB 10000
 #define MAX_CONTRIB 10000000
-#define HARD_CAP_EOS 100000000
+#define HARD_CAP_USD 100000000
 #define CONTRACT mywishtokens
 #define MINTCNT 2
 #define MINTDEST0 mywishio
