@@ -21,7 +21,7 @@ private:
 		eosio::asset total_eth;
 		eosio::asset ethusd;
 		eosio::asset eosusd;
-		int32_t last_daily;
+		int32_t valid_until;
 		bool finalized;
 		time_t start;
 		time_t finish;
@@ -60,7 +60,7 @@ private:
 			.total_eth = ASSET_ETH(0),
 			.ethusd = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
-			.last_daily = 0,
+			.valid_until = 0,
 			.finalized = false,
 			.start = 0,
 			.finish = 0,
@@ -157,7 +157,7 @@ public:
 	void withdraw(account_name investor);
 	void refund(account_name investor);
 	void finalize();
-	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd);
+	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd, time_t next_update);
 #ifdef DEBUG
 	void settime(time_t time);
 #endif

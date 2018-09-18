@@ -9,8 +9,6 @@
 #define NOW now()
 #endif
 
-#define NOWDAY NOW / 86400
-
 crowdsale::crowdsale(account_name self) :
 	eosio::contract(self),
 	state_singleton(this->_self, this->_self),
@@ -25,9 +23,9 @@ crowdsale::~crowdsale() {
 }
 
 void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity) {
-	eosio_assert(NOWDAY == this->state.last_daily, "Rates not updated yet");
 	eosio_assert(NOW >= this->state.start, "Crowdsale not started");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
+	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
 
 	eosio_assert(quantity.amount >= MIN_CONTRIB, "Contribution too low");
 	eosio_assert((quantity.amount <= MAX_CONTRIB) || !MAX_CONTRIB, "Contribution too high");
@@ -152,13 +150,14 @@ void crowdsale::finalize() {
 	this->state.finalized = true;
 }
 
-void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd) {
+void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd, time_t next_update) {
 	require_auth(this->issuer);
 
 	eosio_assert(eth.symbol == SYMBOL_ETH, "Invalid ETH symbol");
 	eosio_assert(ethusd.symbol == SYMBOL_USD, "Invalid USD symbol for ETHUSD");
 	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
 
+	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	eosio_assert(this->total_usd().amount <= HARD_CAP_USD, "Hardcap reached");
 
@@ -166,7 +165,7 @@ void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eos
 	this->state.ethusd = ethusd;
 	this->state.eosusd = eosusd;
 
-	this->state.last_daily = NOWDAY;
+	this->state.valid_until = NOW + next_update;
 }
 
 #ifdef DEBUG
