@@ -150,19 +150,17 @@ void crowdsale::finalize() {
 	this->state.finalized = true;
 }
 
-void crowdsale::setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd, time_t next_update) {
+void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update) {
 	require_auth(this->issuer);
 
-	eosio_assert(eth.symbol == SYMBOL_ETH, "Invalid ETH symbol");
-	eosio_assert(ethusd.symbol == SYMBOL_USD, "Invalid USD symbol for ETHUSD");
+	eosio_assert(usdoneth.symbol == SYMBOL_USD, "Invalid USD symbol for USD raised on ETH contract");
 	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
 
 	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	eosio_assert(this->total_usd().amount <= HARD_CAP_USD, "Hardcap reached");
 
-	this->state.total_eth = eth;
-	this->state.ethusd = ethusd;
+	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;
 
 	this->state.valid_until = NOW + next_update;

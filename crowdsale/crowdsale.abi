@@ -7,6 +7,32 @@
     }
   ],
   "structs": [{
+      "name": "state_t",
+      "base": "",
+      "fields": [{
+          "name": "total_eos",
+          "type": "asset"
+        },{
+          "name": "usdoneth",
+          "type": "asset"
+        },{
+          "name": "eosusd",
+          "type": "asset"
+        },{
+          "name": "valid_until",
+          "type": "time_t"
+        },{
+          "name": "finalized",
+          "type": "bool"
+        },{
+          "name": "start",
+          "type": "time_t"
+        },{
+          "name": "finish",
+          "type": "time_t"
+        }
+      ]
+    },{
       "name": "deposit_t",
       "base": "",
       "fields": [{
@@ -122,10 +148,7 @@
       "name": "setdaily",
       "base": "",
       "fields": [{
-          "name": "eth",
-          "type": "asset"
-        },{
-          "name": "ethusd",
+          "name": "usdoneth",
           "type": "asset"
         },{
           "name": "eosusd",

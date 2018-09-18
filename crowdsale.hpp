@@ -18,8 +18,7 @@ private:
 
 	struct state_t {
 		eosio::extended_asset total_eos;
-		eosio::asset total_eth;
-		eosio::asset ethusd;
+		eosio::asset usdoneth;
 		eosio::asset eosusd;
 		int32_t valid_until;
 		bool finalized;
@@ -57,8 +56,7 @@ private:
 	state_t default_parameters() const {
 		return state_t{
 			.total_eos = ASSET_EOS(0),
-			.total_eth = ASSET_ETH(0),
-			.ethusd = ASSET_USD(0),
+			.usdoneth = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
 			.valid_until = 0,
 			.finalized = false,
@@ -74,10 +72,6 @@ private:
 		return ASSET_USD(asset_eos.amount * eosusd.amount / POW10(4));
 	}
 
-	inline eosio::asset eth2usd(eosio::asset asset_eth, eosio::asset ethusd) const {
-		return ASSET_USD(asset_eth.amount * ethusd.amount / POW10(4));
-	}
-
 	inline eosio::extended_asset usd2eos(eosio::asset asset_usd, eosio::asset eosusd) const {
 		return ASSET_EOS(asset_usd.amount * POW10(4) / eosusd.amount);
 	}
@@ -87,7 +81,7 @@ private:
 	}
 
 	inline eosio::asset total_usd() const {
-		return this->eos2usd(this->state.total_eos, this->state.eosusd) + this->eth2usd(this->state.total_eth, this->state.ethusd);
+		return this->eos2usd(this->state.total_eos, this->state.eosusd) + this->state.usdoneth;
 	}
 
 	void inline_issue(account_name to, eosio::extended_asset quantity, std::string memo) const {
@@ -157,7 +151,7 @@ public:
 	void withdraw(account_name investor);
 	void refund(account_name investor);
 	void finalize();
-	void setdaily(eosio::asset eth, eosio::asset ethusd, eosio::asset eosusd, time_t next_update);
+	void setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update);
 #ifdef DEBUG
 	void settime(time_t time);
 #endif
