@@ -27,6 +27,8 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
 
+	eosio_assert(!this->state.hardcap_reached, "Hardcap reached");
+
 	eosio_assert(quantity.amount >= MIN_CONTRIB, "Contribution too low");
 	eosio_assert((quantity.amount <= MAX_CONTRIB) || !MAX_CONTRIB, "Contribution too high");
 
@@ -34,7 +36,6 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 		this->state.total_eos += quantity;
 	}
 
-	eosio_assert(this->total_usd().amount <= HARD_CAP_USD, "Hardcap reached");
 
 	deposits deposits_table(this->_self, investor);
 	deposits_table.emplace(this->_self, [&](auto& deposit) {
@@ -101,7 +102,7 @@ void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 void crowdsale::withdraw(account_name investor) {
 	require_auth(investor);
 
-	eosio_assert(NOW > this->state.finish || this->total_usd().amount >= HARD_CAP_USD, "Crowdsale not finished");
+	eosio_assert(NOW > this->state.finish || this->state.hardcap_reached, "Crowdsale not finished");
 
 	auto it = this->whitelist.find(investor);
 	eosio_assert(it != this->whitelist.end(), "Not whitelisted, call refund");
@@ -143,7 +144,7 @@ void crowdsale::finalize() {
 	require_auth(this->issuer);
 
 	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
-	eosio_assert(NOW > this->state.finish || this->total_usd().amount >= HARD_CAP_USD, "Crowdsale not finished");
+	eosio_assert(NOW > this->state.finish || this->state.hardcap_reached, "Crowdsale not finished");
 	eosio_assert(!this->state.finalized, "Already finalized");
 
 	this->inline_transfer(this->_self, this->issuer, this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd), "Finalize");
@@ -159,7 +160,9 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next
 
 	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
-	eosio_assert(this->total_usd().amount <= HARD_CAP_USD, "Hardcap reached");
+	if (this->total_usd().amount <= HARD_CAP_USD) {
+		this->state.hardcap_reached = true;
+	}
 
 	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;

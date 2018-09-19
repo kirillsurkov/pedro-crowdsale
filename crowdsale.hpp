@@ -22,6 +22,7 @@ private:
 		eosio::asset eosusd;
 		int32_t valid_until;
 		bool finalized;
+		bool hardcap_reached;
 		time_t start;
 		time_t finish;
 #ifdef DEBUG
@@ -60,6 +61,7 @@ private:
 			.eosusd = ASSET_USD(0),
 			.valid_until = 0,
 			.finalized = false,
+			.hardcap_reached = false,
 			.start = 0,
 			.finish = 0,
 #ifdef DEBUG
