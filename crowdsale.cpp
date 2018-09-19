@@ -48,7 +48,7 @@ void crowdsale::init(time_t start, time_t finish) {
 	eosio_assert(!this->state_singleton.exists(), "Already initialized");
 	eosio_assert(start < finish, "Start must be less than finish");
 
-	require_auth(this->_self);
+	require_auth(this->issuer);
 
 	this->state.start = start;
 	this->state.finish = finish;
@@ -142,6 +142,7 @@ void crowdsale::refund(account_name investor) {
 void crowdsale::finalize() {
 	require_auth(this->issuer);
 
+	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
 	eosio_assert(NOW > this->state.finish || this->total_usd().amount >= HARD_CAP_USD, "Crowdsale not finished");
 	eosio_assert(!this->state.finalized, "Already finalized");
 
