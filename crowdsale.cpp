@@ -160,12 +160,13 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next
 
 	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
-	if (this->total_usd().amount <= HARD_CAP_USD) {
-		this->state.hardcap_reached = true;
-	}
 
 	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;
+
+	if (this->total_usd().amount <= HARD_CAP_USD) {
+		this->state.hardcap_reached = true;
+	}
 
 	this->state.valid_until = NOW + next_update;
 }
