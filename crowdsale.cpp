@@ -112,10 +112,10 @@ void crowdsale::withdraw(account_name investor) {
 	eosio::extended_asset eos = ASSET_EOS(0);
 
 	deposits deposits_table(this->_self, investor);
-	for (auto it = deposits_table.begin(); it != deposits_table.end(); it++) {
+	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
 		tkn += this->usd2tkn(this->eos2usd(it->eos, it->eosusd));
 		eos += it->eos;
-		deposits_table.erase(it);
+		it = deposits_table.erase(it);
 	}
 
 	this->inline_issue(investor, tkn, "Crowdsale");
@@ -131,9 +131,9 @@ void crowdsale::refund(account_name investor) {
 	eosio::extended_asset eoses = ASSET_EOS(0);
 
 	deposits deposits_table(this->_self, investor);
-	for (auto it = deposits_table.begin(); it != deposits_table.end(); it++) {
+	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
 		eoses += it->eos;
-		deposits_table.erase(it);
+		it = deposits_table.erase(it);
 	}
 
 	this->inline_transfer(this->_self, investor, eoses, "Refund");
