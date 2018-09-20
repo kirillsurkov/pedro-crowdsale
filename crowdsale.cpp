@@ -64,14 +64,16 @@ void crowdsale::init(time_t start, time_t finish) {
 }
 
 void crowdsale::setstart(time_t start) {
-	eosio_assert(NOW <= this->state.start, "Crowdsale already started");
 	require_auth(this->issuer);
+	eosio_assert(NOW <= this->state.start, "Crowdsale already started");
+	eosio_assert(start < this->state.finish, "Start must be less than finish");
 	this->state.start = start;
 }
 
 void crowdsale::setfinish(time_t finish) {
-	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	require_auth(this->issuer);
+	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
+	eosio_assert(finish > this->state.start, "Finish must be greater than start");
 	this->state.finish = finish;
 }
 
