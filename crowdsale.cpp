@@ -164,7 +164,7 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next
 	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;
 
-	if (this->total_usd().amount <= HARD_CAP_USD) {
+	if (this->total_usd().amount >= HARD_CAP_USD) {
 		this->state.hardcap_reached = true;
 	}
 
