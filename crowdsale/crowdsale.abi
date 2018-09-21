@@ -11,7 +11,7 @@
       "base": "",
       "fields": [{
           "name": "total_eos",
-          "type": "asset"
+          "type": "extended_asset"
         },{
           "name": "usdoneth",
           "type": "asset"
@@ -23,6 +23,9 @@
           "type": "time_t"
         },{
           "name": "finalized",
+          "type": "bool"
+        },{
+          "name": "finished",
           "type": "bool"
         },{
           "name": "hardcap_reached",

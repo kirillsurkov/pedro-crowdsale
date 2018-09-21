@@ -104,7 +104,7 @@ void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 void crowdsale::withdraw(account_name investor) {
 	require_auth(investor);
 
-	eosio_assert(NOW > this->state.finish || this->state.hardcap_reached, "Crowdsale not finished");
+	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
 
 	auto it = this->whitelist.find(investor);
 	eosio_assert(it != this->whitelist.end(), "Not whitelisted, call refund");
@@ -145,8 +145,7 @@ void crowdsale::refund(account_name investor) {
 void crowdsale::finalize() {
 	require_auth(this->issuer);
 
-	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
-	eosio_assert(NOW > this->state.finish || this->state.hardcap_reached, "Crowdsale not finished");
+	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
 	eosio_assert(!this->state.finalized, "Already finalized");
 
 	this->inline_transfer(this->_self, this->issuer, this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd), "Finalize");
@@ -161,10 +160,14 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next
 	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
 
 	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
-	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
+	eosio_assert(!this->state.finished && !this->state.hardcap_reached, "Crowdsale finished");
 
 	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;
+
+	if (NOW > this->state.finish) {
+		this->state.finished = true;
+	}
 
 	if (this->total_usd().amount > HARD_CAP_USD) {
 		this->state.hardcap_reached = true;

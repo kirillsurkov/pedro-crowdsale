@@ -11,17 +11,13 @@
 
 class crowdsale : public eosio::contract {
 private:
-	struct multiplier_t {
-		uint32_t num;
-		uint32_t denom;
-	};
-
 	struct state_t {
 		eosio::extended_asset total_eos;
 		eosio::asset usdoneth;
 		eosio::asset eosusd;
 		int32_t valid_until;
 		bool finalized;
+		bool finished;
 		bool hardcap_reached;
 		time_t start;
 		time_t finish;
@@ -61,6 +57,7 @@ private:
 			.eosusd = ASSET_USD(0),
 			.valid_until = 0,
 			.finalized = false,
+			.finished = false,
 			.hardcap_reached = false,
 			.start = 0,
 			.finish = 0,
