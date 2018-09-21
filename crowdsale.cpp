@@ -148,7 +148,14 @@ void crowdsale::finalize() {
 	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
 	eosio_assert(!this->state.finalized, "Already finalized");
 
-	this->inline_transfer(this->_self, this->issuer, this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd), "Finalize");
+	eosio::extended_asset eos;
+	if (this->state.hardcap_reached) {
+		eos = this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
+	} else {
+		eos = this->state.total_eos;
+	}
+
+	this->inline_transfer(this->_self, this->issuer, eos, "Finalize");
 
 	this->state.finalized = true;
 }
