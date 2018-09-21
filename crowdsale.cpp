@@ -36,7 +36,6 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 		this->state.total_eos += quantity;
 	}
 
-
 	deposits deposits_table(this->_self, investor);
 	deposits_table.emplace(this->_self, [&](auto& deposit) {
 		deposit.pk = deposits_table.available_primary_key();
