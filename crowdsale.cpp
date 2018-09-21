@@ -108,7 +108,12 @@ void crowdsale::withdraw(account_name investor) {
 	auto it = this->whitelist.find(investor);
 	eosio_assert(it != this->whitelist.end(), "Not whitelisted, call refund");
 
-	eosio::extended_asset community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
+	eosio::extended_asset community_eos;
+	if (this->state.hardcap_reached) {
+		community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
+	} else {
+		community_eos = ASSET_EOS(0);
+	}
 
 	eosio::extended_asset tkn = ASSET_TKN(0);
 	eosio::extended_asset eos = ASSET_EOS(0);
