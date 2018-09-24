@@ -136,6 +136,8 @@ private:
 		}
 	}
 
+	bool toclean;
+
 public:
 	crowdsale(account_name self);
 	~crowdsale();
@@ -151,6 +153,7 @@ public:
 	void refund(account_name investor);
 	void finalize();
 	void setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update);
+	void cleanstate();
 #ifdef DEBUG
 	void settime(time_t time);
 #endif

@@ -14,15 +14,21 @@ crowdsale::crowdsale(account_name self) :
 	state_singleton(this->_self, this->_self),
 	whitelist(this->_self, this->_self),
 	issuer(eosio::string_to_name(STR(ISSUER))),
-	state(state_singleton.exists() ? state_singleton.get() : default_parameters())
+	state(state_singleton.exists() ? state_singleton.get() : default_parameters()),
+	toclean(false)
 {
 }
 
 crowdsale::~crowdsale() {
-	this->state_singleton.set(this->state, this->_self);
+	if (toclean) {
+		this->state_singleton.remove();
+	} else {
+		this->state_singleton.set(this->state, this->_self);
+	}
 }
 
 void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity) {
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(NOW >= this->state.start, "Crowdsale not started");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	eosio_assert(NOW <= this->state.valid_until, "Rates not updated yet");
@@ -64,6 +70,7 @@ void crowdsale::init(time_t start, time_t finish) {
 
 void crowdsale::setstart(time_t start) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(NOW <= this->state.start, "Crowdsale already started");
 	eosio_assert(start < this->state.finish, "Start must be less than finish");
 	this->state.start = start;
@@ -71,6 +78,7 @@ void crowdsale::setstart(time_t start) {
 
 void crowdsale::setfinish(time_t finish) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(NOW <= this->state.finish, "Crowdsale finished");
 	eosio_assert(finish > this->state.start, "Finish must be greater than start");
 	this->state.finish = finish;
@@ -78,16 +86,19 @@ void crowdsale::setfinish(time_t finish) {
 
 void crowdsale::white(account_name account) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	this->setwhite(account);
 }
 
 void crowdsale::unwhite(account_name account) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	this->unsetwhite(account);
 }
 
 void crowdsale::whitemany(eosio::vector<account_name> accounts) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	for (account_name account : accounts) {
 		this->setwhite(account);
 	}
@@ -95,6 +106,7 @@ void crowdsale::whitemany(eosio::vector<account_name> accounts) {
 
 void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 	require_auth(this->issuer);
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	for (account_name account : accounts) {
 		this->unsetwhite(account);
 	}
@@ -103,6 +115,7 @@ void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
 void crowdsale::withdraw(account_name investor) {
 	require_auth(investor);
 
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
 
 	auto it = this->whitelist.find(investor);
@@ -132,6 +145,8 @@ void crowdsale::withdraw(account_name investor) {
 void crowdsale::refund(account_name investor) {
 	require_auth(investor);
 
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
+
 	auto it = this->whitelist.find(investor);
 	eosio_assert(it == this->whitelist.end(), "No pending investments");
 
@@ -149,6 +164,7 @@ void crowdsale::refund(account_name investor) {
 void crowdsale::finalize() {
 	require_auth(this->issuer);
 
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
 	eosio_assert(!this->state.finalized, "Already finalized");
 
@@ -167,6 +183,7 @@ void crowdsale::finalize() {
 void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update) {
 	require_auth(this->issuer);
 
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(usdoneth.symbol == SYMBOL_USD, "Invalid USD symbol for USD raised on ETH contract");
 	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
 
@@ -187,11 +204,16 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next
 	this->state.valid_until = NOW + next_update;
 }
 
+void crowdsale::cleanstate() {
+	this->toclean = true;
+}
+
 #ifdef DEBUG
 void crowdsale::settime(time_t time) {
+	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	this->state.time = time;
 }
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(settime));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate)(settime));
 #else
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate));
 #endif
