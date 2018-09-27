@@ -45,9 +45,23 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 	deposits deposits_table(this->_self, investor);
 	deposits_table.emplace(this->_self, [&](auto& deposit) {
 		deposit.pk = deposits_table.available_primary_key();
-		deposit.eos = quantity;
-		deposit.eosusd = this->state.eosusd;
+		deposit.usd = this->eos2usd(quantity, this->state.eosusd);
 	});
+
+	deposit deposit_table(this->_self, this->_self);
+	auto it = deposit_table.find(investor);
+	if (it == deposit_table.end()) {
+		deposit_table.emplace(this->_self, [&](auto& deposit) {
+			deposit.account = investor;
+			deposit.usd = this->eos2usd(quantity, this->state.eosusd);
+			deposit.eos = quantity;
+		});
+	} else {
+		deposit_table.modify(it, this->_self, [&](auto& deposit) {
+			deposit.usd += this->eos2usd(quantity, this->state.eosusd);
+			deposit.eos += quantity;
+		});
+	}
 }
 
 void crowdsale::init(time_t start, time_t finish) {
@@ -87,28 +101,16 @@ void crowdsale::setfinish(time_t finish) {
 void crowdsale::white(account_name account) {
 	require_auth(this->issuer);
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
+	eosio_assert(!this->state.finished && !this->state.hardcap_reached, "Crowdsale finished");
 	this->setwhite(account);
-}
-
-void crowdsale::unwhite(account_name account) {
-	require_auth(this->issuer);
-	eosio_assert(this->state_singleton.exists(), "Not initialized");
-	this->unsetwhite(account);
 }
 
 void crowdsale::whitemany(eosio::vector<account_name> accounts) {
 	require_auth(this->issuer);
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
+	eosio_assert(!this->state.finished && !this->state.hardcap_reached, "Crowdsale finished");
 	for (account_name account : accounts) {
 		this->setwhite(account);
-	}
-}
-
-void crowdsale::unwhitemany(eosio::vector<account_name> accounts) {
-	require_auth(this->issuer);
-	eosio_assert(this->state_singleton.exists(), "Not initialized");
-	for (account_name account : accounts) {
-		this->unsetwhite(account);
 	}
 }
 
@@ -117,29 +119,34 @@ void crowdsale::withdraw(account_name investor) {
 
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(this->state.finished || this->state.hardcap_reached, "Crowdsale not finished");
+	eosio_assert(this->whitelist.find(investor) != this->whitelist.end(), "Not whitelisted, call refund");
 
-	auto it = this->whitelist.find(investor);
-	eosio_assert(it != this->whitelist.end(), "Not whitelisted, call refund");
+	deposit deposit_table(this->_self, this->_self);
+	auto deposit_it = deposit_table.find(investor);
+	eosio_assert(deposit_it != deposit_table.end(), "Nothing to withdraw");
 
-	eosio::extended_asset community_eos;
-	if (this->state.hardcap_reached) {
-		community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
-	} else {
-		community_eos = ASSET_EOS(0);
-	}
-
+	eosio::extended_asset community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
 	eosio::extended_asset tkn = ASSET_TKN(0);
-	eosio::extended_asset eos = ASSET_EOS(0);
+	eosio::extended_asset eos = ASSET_EOS(community_eos.amount * deposit_it->eos.amount / this->state.total_eos.amount);
+
+	double rate = 1.0;
+	if (this->state.hardcap_reached) {
+		rate *= HARD_CAP_USD;
+		rate /= this->total_usd().amount;
+	}
 
 	deposits deposits_table(this->_self, investor);
 	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
-		tkn += this->usd2tkn(this->eos2usd(it->eos, it->eosusd));
-		eos += it->eos;
+		eosio::asset part = this->usd2tkn(it->usd);
+		part.amount *= rate;
+		tkn += part;
 		it = deposits_table.erase(it);
 	}
 
 	this->inline_issue(investor, tkn, "Crowdsale");
-	this->inline_transfer(this->_self, investor, ASSET_EOS(community_eos.amount * eos.amount / this->state.total_eos.amount), "Crowdsale");
+	if (this->state.hardcap_reached && eos.amount > 0) {
+		this->inline_transfer(this->_self, investor, eos, "Crowdsale");
+	}
 }
 
 void crowdsale::refund(account_name investor) {
@@ -154,11 +161,14 @@ void crowdsale::refund(account_name investor) {
 
 	deposits deposits_table(this->_self, investor);
 	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
-		eoses += it->eos;
 		it = deposits_table.erase(it);
 	}
 
-	this->inline_transfer(this->_self, investor, eoses, "Refund");
+	deposit deposit_table(this->_self, this->_self);
+	auto deposit_it = deposit_table.find(investor);
+	eosio_assert(deposit_it != deposit_table.end(), "Nothing to refund");
+
+	this->inline_transfer(this->_self, investor, deposit_it->eos, "Refund");
 }
 
 void crowdsale::finalize() {
@@ -213,7 +223,7 @@ void crowdsale::settime(time_t time) {
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	this->state.time = time;
 }
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate)(settime));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate)(settime));
 #else
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(unwhite)(whitemany)(unwhitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate));
 #endif

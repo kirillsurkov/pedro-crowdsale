@@ -26,21 +26,26 @@ private:
 #endif
 	};
 
-	// @abi table deposit
 	struct deposit_t {
-		uint64_t pk;
+		account_name account;
+		eosio::asset usd;
 		eosio::extended_asset eos;
-		eosio::asset eosusd;
+		uint64_t primary_key() const { return account; }
+	};
+
+	struct deposits_t {
+		uint64_t pk;
+		eosio::asset usd;
 		uint64_t primary_key() const { return pk; }
 	};
 
-	// @abi table whitelist
 	struct userlist_t {
 		account_name account;
 		uint64_t primary_key() const { return account; }
 	};
 
-	typedef eosio::multi_index<N(deposit), deposit_t> deposits;
+	typedef eosio::multi_index<N(deposit), deposit_t> deposit;
+	typedef eosio::multi_index<N(deposits), deposits_t> deposits;
 	eosio::singleton<N(state), state_t> state_singleton;
 	eosio::multi_index<N(whitelist), userlist_t> whitelist;
 
@@ -119,20 +124,10 @@ private:
 			e.account = account;
 		});
 
-		deposits deposits_table(this->_self, account);
-		for (auto it = deposits_table.begin(); it != deposits_table.end(); it++) {
-			this->state.total_eos += it->eos;
-		}
-	}
-
-	void unsetwhite(account_name account) {
-		auto it = this->whitelist.find(account);
-		eosio_assert(it != this->whitelist.end(), "Account not whitelisted");
-		whitelist.erase(it);
-
-		deposits deposits_table(this->_self, account);
-		for (auto it = deposits_table.begin(); it != deposits_table.end(); it++) {
-			this->state.total_eos -= it->eos;
+		deposit deposit_table(this->_self, this->_self);
+		auto deposit_it = deposit_table.find(account);
+		if (deposit_it != deposit_table.end()) {
+			this->state.total_eos += deposit_it->eos;
 		}
 	}
 
@@ -146,9 +141,7 @@ public:
 	void setstart(time_t start);
 	void setfinish(time_t finish);
 	void white(account_name account);
-	void unwhite(account_name account);
 	void whitemany(eosio::vector<account_name> accounts);
-	void unwhitemany(eosio::vector<account_name> accounts);
 	void withdraw(account_name investor);
 	void refund(account_name investor);
 	void finalize();
