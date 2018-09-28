@@ -184,8 +184,8 @@ void crowdsale::finalize() {
 
 	eosio::extended_asset eos;
 	if (this->state.hardcap_reached) {
-		eosio::asset owner_usd = ASSET_USD((int64_t)(1.0 * HARD_CAP_USD * this->state.total_usd / this->total_usd()));
-		eos = ASSET_EOS((int64_t)(1.0 * this->state.total_eos * owner_usd.amount / this->state.total_usd));
+		eosio::asset owner_usd = ASSET_USD((int64_t)(1.0 * HARD_CAP_USD * this->state.total_usd.amount / this->total_usd().amount));
+		eos = ASSET_EOS((int64_t)(1.0 * this->state.total_eos.amount * owner_usd.amount / this->state.total_usd.amount));
 	} else {
 		eos = this->state.total_eos;
 	}
