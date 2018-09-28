@@ -13,6 +13,9 @@
           "name": "total_eos",
           "type": "extended_asset"
         },{
+          "name": "total_usd",
+          "type": "asset"
+        },{
           "name": "usdoneth",
           "type": "asset"
         },{
