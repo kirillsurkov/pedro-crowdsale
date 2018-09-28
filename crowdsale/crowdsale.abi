@@ -19,6 +19,9 @@
           "name": "eosusd",
           "type": "asset"
         },{
+          "name": "usdtkn",
+          "type": "asset"
+        },{
           "name": "valid_until",
           "type": "time_t"
         },{
@@ -39,7 +42,7 @@
         }
       ]
     },{
-      "name": "deposit_t",
+      "name": "deposits_t",
       "base": "",
       "fields": [{
           "name": "pk",
@@ -107,23 +110,7 @@
         }
       ]
     },{
-      "name": "unwhite",
-      "base": "",
-      "fields": [{
-          "name": "account",
-          "type": "name"
-        }
-      ]
-    },{
       "name": "whitemany",
-      "base": "",
-      "fields": [{
-          "name": "accounts",
-          "type": "name[]"
-        }
-      ]
-    },{
-      "name": "unwhitemany",
       "base": "",
       "fields": [{
           "name": "accounts",
@@ -164,6 +151,9 @@
           "name": "eosusd",
           "type": "asset"
         },{
+          "name": "usdtkn",
+          "type": "asset"
+        },{
           "name": "next_update",
           "type": "time_t"
         }
@@ -191,16 +181,8 @@
       "type": "white",
       "ricardian_contract": ""
     },{
-      "name": "unwhite",
-      "type": "unwhite",
-      "ricardian_contract": ""
-    },{
       "name": "whitemany",
       "type": "whitemany",
-      "ricardian_contract": ""
-    },{
-      "name": "unwhitemany",
-      "type": "unwhitemany",
       "ricardian_contract": ""
     },{
       "name": "withdraw",
@@ -235,7 +217,7 @@
       ],
       "type": "state_t"
     },{
-      "name": "deposit",
+      "name": "deposits",
       "index_type": "i64",
       "key_names": [
         "pk"
@@ -243,7 +225,7 @@
       "key_types": [
         "uint64"
       ],
-      "type": "deposit_t"
+      "type": "deposits_t"
     },{
       "name": "whitelist",
       "index_type": "i64",
