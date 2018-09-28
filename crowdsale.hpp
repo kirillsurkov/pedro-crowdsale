@@ -86,7 +86,7 @@ private:
 	}
 
 	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd, eosio::asset usdtkn) const {
-		return ASSET_TKN((int)((1.0 * asset_usd.amount / POW10(4)) * (1.0 * usdtkn.amount / POW10(DECIMALS)) * POW10(DECIMALS)));
+		return ASSET_TKN((int64_t)((1.0 * asset_usd.amount / POW10(4)) * (1.0 * usdtkn.amount / POW10(DECIMALS)) * POW10(DECIMALS)));
 	}
 
 	inline eosio::asset total_usd() const {
