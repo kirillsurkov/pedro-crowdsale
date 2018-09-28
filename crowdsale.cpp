@@ -190,18 +190,20 @@ void crowdsale::finalize() {
 	this->state.finalized = true;
 }
 
-void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update) {
+void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, eosio::asset usdtkn, time_t next_update) {
 	require_auth(this->issuer);
 
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	eosio_assert(usdoneth.symbol == SYMBOL_USD, "Invalid USD symbol for USD raised on ETH contract");
 	eosio_assert(eosusd.symbol == SYMBOL_USD, "Invalid USD symbol for EOSUSD");
+	eosio_assert(usdtkn.symbol == SYMBOL_TKN, "Invalid token symbol for USDTKN");
 
 	eosio_assert(NOW >= this->state.valid_until, "Rates are already updated");
 	eosio_assert(!this->state.finished && !this->state.hardcap_reached, "Crowdsale finished");
 
 	this->state.usdoneth = usdoneth;
 	this->state.eosusd = eosusd;
+	this->state.usdtkn = usdtkn;
 
 	if (NOW > this->state.finish) {
 		this->state.finished = true;

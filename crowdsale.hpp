@@ -15,6 +15,7 @@ private:
 		eosio::extended_asset total_eos;
 		eosio::asset usdoneth;
 		eosio::asset eosusd;
+		eosio::asset usdtkn;
 		int32_t valid_until;
 		bool finalized;
 		bool finished;
@@ -60,6 +61,7 @@ private:
 			.total_eos = ASSET_EOS(0),
 			.usdoneth = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
+			.usdtkn = ASSET_USD(0),
 			.valid_until = 0,
 			.finalized = false,
 			.finished = false,
@@ -81,7 +83,7 @@ private:
 	}
 
 	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd) const {
-		return ASSET_TKN(asset_usd.amount * POW10(DECIMALS) * RATE / (1.0 * POW10(4) * RATE_DENOM));
+		return ASSET_TKN((int)(1.0 * asset_usd.amount * this->state.usdtkn.amount * POW10(DECIMALS) / POW10(8)));
 	}
 
 	inline eosio::asset total_usd() const {
@@ -145,7 +147,7 @@ public:
 	void withdraw(account_name investor);
 	void refund(account_name investor);
 	void finalize();
-	void setdaily(eosio::asset usdoneth, eosio::asset eosusd, time_t next_update);
+	void setdaily(eosio::asset usdoneth, eosio::asset eosusd, eosio::asset usdtkn, time_t next_update);
 	void cleanstate();
 #ifdef DEBUG
 	void settime(time_t time);
