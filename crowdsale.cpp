@@ -46,6 +46,7 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 	deposits_table.emplace(this->_self, [&](auto& deposit) {
 		deposit.pk = deposits_table.available_primary_key();
 		deposit.usd = this->eos2usd(quantity, this->state.eosusd);
+		deposit.usdtkn = this->state.usdtkn;
 	});
 
 	deposit deposit_table(this->_self, this->_self);
@@ -137,7 +138,7 @@ void crowdsale::withdraw(account_name investor) {
 
 	deposits deposits_table(this->_self, investor);
 	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
-		eosio::asset part = this->usd2tkn(it->usd);
+		eosio::asset part = this->usd2tkn(it->usd, it->usdtkn);
 		part.amount *= rate;
 		tkn += part;
 		it = deposits_table.erase(it);

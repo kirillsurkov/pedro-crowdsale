@@ -37,6 +37,7 @@ private:
 	struct deposits_t {
 		uint64_t pk;
 		eosio::asset usd;
+		eosio::asset usdtkn;
 		uint64_t primary_key() const { return pk; }
 	};
 
@@ -61,7 +62,7 @@ private:
 			.total_eos = ASSET_EOS(0),
 			.usdoneth = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
-			.usdtkn = ASSET_USD(0),
+			.usdtkn = ASSET_TKN(0),
 			.valid_until = 0,
 			.finalized = false,
 			.finished = false,
@@ -82,8 +83,8 @@ private:
 		return ASSET_EOS(asset_usd.amount * POW10(4) / eosusd.amount);
 	}
 
-	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd) const {
-		return ASSET_TKN((int)(1.0 * asset_usd.amount * this->state.usdtkn.amount * POW10(DECIMALS) / POW10(8)));
+	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd, eosio::asset usdtkn) const {
+		return ASSET_TKN((int)((1.0 * asset_usd.amount / POW10(4)) * (1.0 * usdtkn.amount / POW10(DECIMALS)) * POW10(DECIMALS)));
 	}
 
 	inline eosio::asset total_usd() const {
