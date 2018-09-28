@@ -61,7 +61,7 @@ private:
 	state_t default_parameters() const {
 		return state_t{
 			.total_eos = ASSET_EOS(0),
-			.total_usd = ASSET_EOS(0),
+			.total_usd = ASSET_USD(0),
 			.usdoneth = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
 			.usdtkn = ASSET_TKN(0),

@@ -127,7 +127,7 @@ void crowdsale::withdraw(account_name investor) {
 	auto deposit_it = deposit_table.find(investor);
 	eosio_assert(deposit_it != deposit_table.end(), "Nothing to withdraw");
 
-	eosio::extended_asset community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->eos2usd(this->state.total_eos, this->state.eosusd).amount / this->total_usd().amount), this->state.eosusd);
+	eosio::extended_asset community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->state.total_usd.amount / this->total_usd().amount), this->state.eosusd);
 	eosio::extended_asset tkn = ASSET_TKN(0);
 	eosio::extended_asset eos = ASSET_EOS(community_eos.amount * deposit_it->eos.amount / this->state.total_eos.amount);
 
