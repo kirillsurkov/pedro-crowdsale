@@ -40,6 +40,7 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 
 	if (this->whitelist.find(investor) != this->whitelist.end()) {
 		this->state.total_eos += quantity;
+		this->state.total_usd += this->eos2usd(quantity, this->state.eosusd);
 	}
 
 	deposits deposits_table(this->_self, investor);

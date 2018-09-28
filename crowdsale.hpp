@@ -13,6 +13,7 @@ class crowdsale : public eosio::contract {
 private:
 	struct state_t {
 		eosio::extended_asset total_eos;
+		eosio::asset total_usd;
 		eosio::asset usdoneth;
 		eosio::asset eosusd;
 		eosio::asset usdtkn;
@@ -60,6 +61,7 @@ private:
 	state_t default_parameters() const {
 		return state_t{
 			.total_eos = ASSET_EOS(0),
+			.total_usd = ASSET_EOS(0),
 			.usdoneth = ASSET_USD(0),
 			.eosusd = ASSET_USD(0),
 			.usdtkn = ASSET_TKN(0),
@@ -88,7 +90,7 @@ private:
 	}
 
 	inline eosio::asset total_usd() const {
-		return this->eos2usd(this->state.total_eos, this->state.eosusd) + this->state.usdoneth;
+		return this->state.total_usd + this->state.usdoneth;
 	}
 
 	void inline_issue(account_name to, eosio::extended_asset quantity, std::string memo) const {
@@ -131,6 +133,7 @@ private:
 		auto deposit_it = deposit_table.find(account);
 		if (deposit_it != deposit_table.end()) {
 			this->state.total_eos += deposit_it->eos;
+			this->state.total_usd += deposit_it->usd;
 		}
 	}
 
