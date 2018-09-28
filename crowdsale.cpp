@@ -127,9 +127,14 @@ void crowdsale::withdraw(account_name investor) {
 	auto deposit_it = deposit_table.find(investor);
 	eosio_assert(deposit_it != deposit_table.end(), "Nothing to withdraw");
 
-	eosio::extended_asset community_eos = this->state.total_eos - this->usd2eos(ASSET_USD(HARD_CAP_USD * this->state.total_usd.amount / this->total_usd().amount), this->state.eosusd);
+	eosio::asset community_usd = ASSET_USD((int64_t)(1.0 * (this->total_usd().amount - HARD_CAP_USD) * this->state.total_usd.amount / this->total_usd().amount));
+	if (community_usd.amount > 0) {
+		eosio::extended_asset community_eos = ASSET_EOS((int64_t)(1.0 * this->state.total_eos.amount * community_usd.amount / this->state.total_usd.amount));
+		eosio::extended_asset eos = ASSET_EOS((int64_t)(1.0 * community_eos.amount * deposit_it->eos.amount / this->state.total_eos.amount));
+		this->inline_transfer(this->_self, investor, eos, "Crowdsale");
+	}
+
 	eosio::extended_asset tkn = ASSET_TKN(0);
-	eosio::extended_asset eos = ASSET_EOS(community_eos.amount * deposit_it->eos.amount / this->state.total_eos.amount);
 
 	double rate = 1.0;
 	if (this->state.hardcap_reached) {
@@ -146,9 +151,6 @@ void crowdsale::withdraw(account_name investor) {
 	}
 
 	this->inline_issue(investor, tkn, "Crowdsale");
-	if (this->state.hardcap_reached && eos.amount > 0) {
-		this->inline_transfer(this->_self, investor, eos, "Crowdsale");
-	}
 }
 
 void crowdsale::refund(account_name investor) {
@@ -182,7 +184,8 @@ void crowdsale::finalize() {
 
 	eosio::extended_asset eos;
 	if (this->state.hardcap_reached) {
-		eos = this->usd2eos(ASSET_USD(HARD_CAP_USD * this->state.total_usd.amount / this->total_usd().amount), this->state.eosusd);
+		eosio::asset owner_usd = ASSET_USD((int64_t)(1.0 * HARD_CAP_USD * this->state.total_usd / this->total_usd()));
+		eos = ASSET_EOS((int64_t)(1.0 * this->state.total_eos * owner_usd.amount / this->state.total_usd));
 	} else {
 		eos = this->state.total_eos;
 	}
