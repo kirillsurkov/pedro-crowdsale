@@ -43,25 +43,22 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 		this->state.total_usd += this->eos2usd(quantity, this->state.eosusd);
 	}
 
-	deposits deposits_table(this->_self, investor);
-	deposits_table.emplace(this->_self, [&](auto& deposit) {
-		deposit.pk = deposits_table.available_primary_key();
-		deposit.usd = this->eos2usd(quantity, this->state.eosusd);
-		deposit.usdtkn = this->state.usdtkn;
-	});
-
 	deposit deposit_table(this->_self, this->_self);
 	auto it = deposit_table.find(investor);
 	if (it == deposit_table.end()) {
 		deposit_table.emplace(this->_self, [&](auto& deposit) {
+			auto usd = this->eos2usd(quantity, this->state.eosusd);
 			deposit.account = investor;
-			deposit.usd = this->eos2usd(quantity, this->state.eosusd);
+			deposit.usd = usd;
 			deposit.eos = quantity;
+			deposit.tkn = this->usd2tkn(usd, this->state.usdtkn);
 		});
 	} else {
 		deposit_table.modify(it, this->_self, [&](auto& deposit) {
-			deposit.usd += this->eos2usd(quantity, this->state.eosusd);
+			auto usd = this->eos2usd(quantity, this->state.eosusd);
+			deposit.usd += usd;
 			deposit.eos += quantity;
+			deposit.tkn += this->usd2tkn(usd, this->state.usdtkn);
 		});
 	}
 }
@@ -134,20 +131,10 @@ void crowdsale::withdraw(account_name investor) {
 		this->inline_transfer(this->_self, investor, eos, "Crowdsale");
 	}
 
-	eosio::extended_asset tkn = ASSET_TKN(0);
-
-	double rate = 1.0;
+	eosio::extended_asset tkn = deposit_it->tkn;
 	if (this->state.hardcap_reached) {
-		rate *= HARD_CAP_USD;
-		rate /= this->total_usd().amount;
-	}
-
-	deposits deposits_table(this->_self, investor);
-	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
-		eosio::asset part = this->usd2tkn(it->usd, it->usdtkn);
-		part.amount *= rate;
-		tkn += part;
-		it = deposits_table.erase(it);
+		tkn.amount *= HARD_CAP_USD;
+		tkn.amount /= this->total_usd().amount;
 	}
 
 	this->inline_issue(investor, tkn, "Crowdsale");
@@ -162,11 +149,6 @@ void crowdsale::refund(account_name investor) {
 	eosio_assert(it == this->whitelist.end(), "No pending investments");
 
 	eosio::extended_asset eoses = ASSET_EOS(0);
-
-	deposits deposits_table(this->_self, investor);
-	for (auto it = deposits_table.begin(); it != deposits_table.end();) {
-		it = deposits_table.erase(it);
-	}
 
 	deposit deposit_table(this->_self, this->_self);
 	auto deposit_it = deposit_table.find(investor);

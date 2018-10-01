@@ -32,14 +32,8 @@ private:
 		account_name account;
 		eosio::asset usd;
 		eosio::extended_asset eos;
+		eosio::extended_asset tkn;
 		uint64_t primary_key() const { return account; }
-	};
-
-	struct deposits_t {
-		uint64_t pk;
-		eosio::asset usd;
-		eosio::asset usdtkn;
-		uint64_t primary_key() const { return pk; }
 	};
 
 	struct userlist_t {
@@ -48,7 +42,6 @@ private:
 	};
 
 	typedef eosio::multi_index<N(deposit), deposit_t> deposit;
-	typedef eosio::multi_index<N(deposits), deposits_t> deposits;
 	eosio::singleton<N(state), state_t> state_singleton;
 	eosio::multi_index<N(whitelist), userlist_t> whitelist;
 
