@@ -1,8 +1,6 @@
 #include "crowdsale.hpp"
 #include "override.hpp"
 
-#define EOS2TKN(EOS) (int64_t)((EOS) * POW10(DECIMALS) * RATE / (1.0 * POW10(4) * RATE_DENOM))
-
 #ifdef DEBUG
 #define NOW this->state.time
 #else
@@ -45,9 +43,9 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 
 	deposit deposit_table(this->_self, this->_self);
 	auto it = deposit_table.find(investor);
+	auto usd = this->eos2usd(quantity, this->state.eosusd);
 	if (it == deposit_table.end()) {
 		deposit_table.emplace(this->_self, [&](auto& deposit) {
-			auto usd = this->eos2usd(quantity, this->state.eosusd);
 			deposit.account = investor;
 			deposit.usd = usd;
 			deposit.eos = quantity;
@@ -55,7 +53,6 @@ void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity
 		});
 	} else {
 		deposit_table.modify(it, this->_self, [&](auto& deposit) {
-			auto usd = this->eos2usd(quantity, this->state.eosusd);
 			deposit.usd += usd;
 			deposit.eos += quantity;
 			deposit.tkn += this->usd2tkn(usd, this->state.usdtkn);
@@ -133,8 +130,7 @@ void crowdsale::withdraw(account_name investor) {
 
 	eosio::extended_asset tkn = deposit_it->tkn;
 	if (this->state.hardcap_reached) {
-		tkn.amount *= HARD_CAP_USD;
-		tkn.amount /= this->total_usd().amount;
+		tkn.amount *= 1.0 * HARD_CAP_USD / this->total_usd().amount;
 	}
 
 	this->inline_issue(investor, tkn, "Crowdsale");
