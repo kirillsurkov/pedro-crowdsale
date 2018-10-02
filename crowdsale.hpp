@@ -71,7 +71,7 @@ private:
 	}
 
 	inline eosio::asset eos2usd(eosio::asset asset_eos, eosio::asset eosusd) const {
-		return ASSET_USD(asset_eos.amount * eosusd.amount / POW10(4));
+		return ASSET_USD(static_cast<int64_t>(static_cast<int128_t>(asset_eos.amount) * eosusd.amount / POW10(4)));
 	}
 
 	inline eosio::extended_asset usd2eos(eosio::asset asset_usd, eosio::asset eosusd) const {
@@ -79,7 +79,7 @@ private:
 	}
 
 	inline eosio::extended_asset usd2tkn(eosio::asset asset_usd, eosio::asset usdtkn) const {
-		return ASSET_TKN(asset_usd.amount * usdtkn.amount / POW10(DECIMALS));
+		return ASSET_TKN(static_cast<int64_t>(static_cast<int128_t>(asset_usd.amount) * usdtkn.amount / POW10(DECIMALS)));
 	}
 
 	inline eosio::asset total_usd() const {
