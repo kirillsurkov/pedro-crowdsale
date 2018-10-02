@@ -12,17 +12,12 @@ crowdsale::crowdsale(account_name self) :
 	state_singleton(this->_self, this->_self),
 	whitelist(this->_self, this->_self),
 	issuer(eosio::string_to_name(STR(ISSUER))),
-	state(state_singleton.exists() ? state_singleton.get() : default_parameters()),
-	toclean(false)
+	state(state_singleton.exists() ? state_singleton.get() : default_parameters())
 {
 }
 
 crowdsale::~crowdsale() {
-	if (toclean) {
-		this->state_singleton.remove();
-	} else {
-		this->state_singleton.set(this->state, this->_self);
-	}
+	this->state_singleton.set(this->state, this->_self);
 }
 
 void crowdsale::on_deposit(account_name investor, eosio::extended_asset quantity) {
@@ -199,16 +194,12 @@ void crowdsale::setdaily(eosio::asset usdoneth, eosio::asset eosusd, eosio::asse
 	this->state.valid_until = NOW + next_update;
 }
 
-void crowdsale::cleanstate() {
-	this->toclean = true;
-}
-
 #ifdef DEBUG
 void crowdsale::settime(time_t time) {
 	eosio_assert(this->state_singleton.exists(), "Not initialized");
 	this->state.time = time;
 }
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate)(settime));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(settime));
 #else
-EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer)(cleanstate));
+EOSIO_ABI(crowdsale, (init)(setstart)(setfinish)(white)(whitemany)(withdraw)(refund)(finalize)(setdaily)(transfer));
 #endif

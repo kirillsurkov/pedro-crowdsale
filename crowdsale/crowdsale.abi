@@ -141,10 +141,6 @@
       "base": "",
       "fields": []
     },{
-      "name": "cleanstate",
-      "base": "",
-      "fields": []
-    },{
       "name": "setdaily",
       "base": "",
       "fields": [{
@@ -198,10 +194,6 @@
     },{
       "name": "finalize",
       "type": "finalize",
-      "ricardian_contract": ""
-    },{
-      "name": "cleanstate",
-      "type": "cleanstate",
       "ricardian_contract": ""
     },{
       "name": "setdaily",
